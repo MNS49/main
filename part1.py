@@ -44,7 +44,7 @@ if KUCOIN_API_KEY and KUCOIN_API_SECRET and KUCOIN_API_PASSPHRASE:
             KUCOIN_API_KEY,
             KUCOIN_API_SECRET,
             KUCOIN_API_PASSPHRASE,
-            is_sandbox=KUCOIN_SANDBOX,
+            sandbox=KUCOIN_SANDBOX,
             api_key_version=KUCOIN_API_KEY_VERSION,
         )
 
