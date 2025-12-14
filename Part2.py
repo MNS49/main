@@ -50,6 +50,21 @@ INCREMENT_PCT = float(globals().get("INCREMENT_PCT", 0.02))
 kucoin = globals().get("kucoin")
 IS_SIMULATION = bool(globals().get("IS_SIMULATION", False))
 
+def is_simulation() -> bool:
+    """تحديد ما إذا كان البوت يعمل بوضع المحاكاة."""
+    try:
+        flag = bool(globals().get("IS_SIMULATION", False))
+    except Exception:
+        flag = False
+
+    # إذا لم يكن هناك عميل KuCoin جاهز نعامل الحالة كمحاكاة لتجنب الأوامر الحقيقية.
+    try:
+        has_kucoin = globals().get("kucoin") is not None
+    except Exception:
+        has_kucoin = False
+
+    return bool(flag or not has_kucoin)
+
 # Telegram client من القسم الأول
 client = globals().get("client")
 
