@@ -101,8 +101,9 @@ is_simulation = globals().get("is_simulation")
 CYCLE_SLOTS_DEFAULT = int(globals().get("CYCLE_SLOTS", 10))
 MAX_TRACKS = int(globals().get("MAX_TRACKS", 10))
 
-# ===== الحساب الذي تُستقبل منه الأوامر =====
+# ===== الحساب الذي تُستقبل منه الأوامر / القناة =====
 COMMAND_CHAT = globals().get("COMMAND_CHAT", "Mohamad4992")
+CHANNEL_USERNAME = globals().get("CHANNEL_USERNAME", "")
 
 # ========= دوال مساعدة للرسائل الطويلة =========
 async def _send_long_message(text: str, part_title: str = None, limit: int = TELEGRAM_MSG_LIMIT):
@@ -1098,9 +1099,47 @@ async def _manual_sell_slot(sym_norm: str, track_num: int, slot_id: str, cell: D
             symbol=sym_norm
         )
 
-# ====== COMMAND HANDLER (from Mohamad4992) ======
+# ====== CHANNEL LISTENER ======
 client = globals().get("client")
+_channel_listener_attached = False
 
+def attach_channel_handler():
+    """
+    ربط مستمع القناة الخاصة بالتوصيات (CHANNEL_USERNAME).
+    إذا كانت القيم ناقصة أو لم يتوفر Telethon نتخطى بهدوء مع طباعة رسالة.
+    """
+    global _channel_listener_attached
+
+    if _channel_listener_attached:
+        return
+    if client is None or events is None:
+        _console_echo("⚠️ Telethon client or events not available; channel listener disabled.")
+        return
+    if not CHANNEL_USERNAME:
+        _console_echo("⚠️ CHANNEL_USERNAME is empty; channel listener disabled.")
+        return
+
+    @client.on(events.NewMessage(chats=CHANNEL_USERNAME))
+    async def _channel_handler(event):  # type: ignore[unused-ignore]
+        text = (event.raw_text or "").strip()
+        _console_echo(f"[CHAN] {text}")
+
+        if not text:
+            return
+
+        try:
+            if callable(send_notification_tc):
+                await send_notification_tc(f"📩 Channel signal from {CHANNEL_USERNAME}:\n{text}")
+            elif callable(send_notification):
+                await send_notification(f"📩 Channel signal from {CHANNEL_USERNAME}:\n{text}")
+        except Exception as e:
+            _console_echo(f"⚠️ channel handler notification error: {e}")
+
+    _channel_listener_attached = True
+    _console_echo(f"✅ Channel listener attached for {CHANNEL_USERNAME}")
+
+
+# ====== COMMAND HANDLER (from Mohamad4992) ======
 if client is not None and events is not None:
     @client.on(events.NewMessage(chats=COMMAND_CHAT))
     async def command_handler(event):

@@ -38,7 +38,17 @@ SECONDARY_CHAT = None        # أو مثلاً: "AnotherUser"
 IS_SIMULATION = bool(int(os.getenv("BOT_SIMULATION", "0")))
 
 # -------- KuCoin Client --------
+kucoin = None
 if KUCOIN_API_KEY and KUCOIN_API_SECRET and KUCOIN_API_PASSPHRASE:
+    def _attach_partner_headers(client: KucoinClient) -> None:
+        if KUCOIN_PARTNER and KUCOIN_PARTNER_KEY and KUCOIN_PARTNER_SECRET:
+            client._requests_params = client._requests_params or {}
+            client._requests_params.update({
+                "KC-API-PARTNER": KUCOIN_PARTNER,
+                "KC-API-PARTNER-KEY": KUCOIN_PARTNER_KEY,
+                "KC-API-PARTNER-SIGN": KUCOIN_PARTNER_SECRET,
+            })
+
     try:
         kucoin = KucoinClient(
             KUCOIN_API_KEY,
@@ -47,20 +57,29 @@ if KUCOIN_API_KEY and KUCOIN_API_SECRET and KUCOIN_API_PASSPHRASE:
             sandbox=KUCOIN_SANDBOX,
             api_key_version=KUCOIN_API_KEY_VERSION,
         )
-
-        # لو عندك مفاتيح Partner:
-        if KUCOIN_PARTNER and KUCOIN_PARTNER_KEY and KUCOIN_PARTNER_SECRET:
-            kucoin._requests_params = kucoin._requests_params or {}
-            kucoin._requests_params.update({
-                "KC-API-PARTNER": KUCOIN_PARTNER,
-                "KC-API-PARTNER-KEY": KUCOIN_PARTNER_KEY,
-                "KC-API-PARTNER-SIGN": KUCOIN_PARTNER_SECRET,
-            })
+        _attach_partner_headers(kucoin)
+    except TypeError as e:
+        # بعض إصدارات مكتبة kucoin لا تدعم api_key_version → نحاول مجددًا بدونها
+        if "api_key_version" in str(e):
+            try:
+                kucoin = KucoinClient(
+                    KUCOIN_API_KEY,
+                    KUCOIN_API_SECRET,
+                    KUCOIN_API_PASSPHRASE,
+                    sandbox=KUCOIN_SANDBOX,
+                )
+                _attach_partner_headers(kucoin)
+                print("ℹ️ KuCoin client initialized without api_key_version (legacy kucoin-python).")
+            except Exception as e2:
+                print(f"⚠️ KuCoin client init failed (legacy retry): {e2}")
+                kucoin = None
+        else:
+            print(f"⚠️ KuCoin client init failed: {e}")
+            kucoin = None
     except Exception as e:
         print(f"⚠️ KuCoin client init failed: {e}")
         kucoin = None
 else:
-    kucoin = None
     print("ℹ️ KuCoin API keys are empty. Running in price-only / simulation mode.")
 
 # -------- Telegram client --------
